@@ -2,85 +2,84 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Interactive Accelerometer Data Graph</title>
+<title>Accelerometer Data Recorder</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
-<h1>Interactive Accelerometer Data Graph</h1>
-<button onclick="requestMotionPermissions()">Enable Motion Data</button>
+<h1>Accelerometer Data Recorder</h1>
+<button onclick="startRecording()">Play</button>
+<button onclick="stopRecording()">End</button>
 <canvas id="accChart"></canvas>
 
 <script>
-// Prepare the chart data structure with limited data retention
-var data = {
-    labels: [],
-    datasets: [
-        {
-            label: 'X-axis',
-            borderColor: 'rgb(255, 99, 132)',
-            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            data: [],
-            lineTension: 0
-        },
-        {
-            label: 'Y-axis',
-            borderColor: 'rgb(54, 162, 235)',
-            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-            data: [],
-            lineTension: 0
-        },
-        {
-            label: 'Z-axis',
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-            data: [],
-            lineTension: 0
-        }
-    ]
-};
+var recording = false;
+var accData = [];
+var accChart;
 
-// Setup options with zoom and pan capabilities
-var config = {
-    type: 'line',
-    data: data,
-    options: {
-        scales: {
-            x: {
-                type: 'linear',
-                beginAtZero: true
-            }
+document.addEventListener("DOMContentLoaded", function() {
+    var ctx = document.getElementById('accChart').getContext('2d');
+    accChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {label: 'X-axis', borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.5)', data: []},
+                {label: 'Y-axis', borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', data: []},
+                {label: 'Z-axis', borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)', data: []}
+            ]
         },
-        plugins: {
-            zoom: {
-                zoom: {
-                    wheel: { enabled: true },
-                    pinch: { enabled: true },
-                    mode: 'xy'
-                },
-                pan: {
-                    enabled: true,
-                    mode: 'xy'
-                }
+        options: {
+            scales: {
+                x: {type: 'linear', beginAtZero: true}
+            },
+            plugins: {
+                zoom: {zoom: {wheel: {enabled: true}, pinch: {enabled: true}, mode: 'xy'}, pan: {enabled: true, mode: 'xy'}}
             }
+        }
+    });
+});
+
+function startRecording() {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission().then(permissionState => {
+            if (permissionState === 'granted') {
+                recording = true;
+                window.addEventListener('devicemotion', motionHandler, false);
+            } else {
+                console.log("Permission denied.");
+            }
+        }).catch(console.error);
+    } else {
+        recording = true;
+        window.addEventListener('devicemotion', motionHandler, false);
+    }
+}
+
+function stopRecording() {
+    recording = false;
+    window.removeEventListener('devicemotion', motionHandler);
+    exportCSVFile(accData);
+    accData = []; // Clear the recorded data after exporting
+}
+
+function motionHandler(event) {
+    if (recording) {
+        var acc = event.acceleration;
+        if (acc) {
+            var dataPoint = {
+                time: event.timeStamp,
+                x: acc.x,
+                y: acc.y,
+                z: acc.z
+            };
+            accData.push(dataPoint);
+            addData(accChart, event.timeStamp, acc.x, acc.y, acc.z);
         }
     }
-};
+}
 
-// Create the chart
-var accChart = new Chart(
-    document.getElementById('accChart').getContext('2d'),
-    config
-);
-
-// Function to update chart and limit data points
 function addData(chart, label, dataX, dataY, dataZ) {
-    if (chart.data.labels.length > 200) { // Limit data points to 200
-        chart.data.labels.shift();
-        chart.data.datasets.forEach((dataset) => {
-            dataset.data.shift();
-        });
-    }
     chart.data.labels.push(label);
     chart.data.datasets[0].data.push(dataX);
     chart.data.datasets[1].data.push(dataY);
@@ -88,32 +87,20 @@ function addData(chart, label, dataX, dataY, dataZ) {
     chart.update();
 }
 
-function motionHandler(event) {
-    var acc = event.acceleration;
-    if (acc) {
-        addData(accChart, event.timeStamp, acc.x, acc.y, acc.z);
-    }
+function exportCSVFile(items) {
+    var csv = 'Time,X,Y,Z\n';
+    items.forEach(function(item) {
+        csv += item.time + ',' + item.x + ',' + item.y + ',' + item.z + '\n';
+    });
+    var hiddenElement = document.createElement('a');
+    hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+    hiddenElement.target = '_blank';
+    hiddenElement.download = 'accelerometer_data.csv';
+    hiddenElement.click();
 }
 
-function requestMotionPermissions() {
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission().then(permissionState => {
-            if (permissionState === 'granted') {
-                window.addEventListener('devicemotion', motionHandler, false);
-            } else {
-                console.log("Permission denied.");
-            }
-        }).catch(console.error);
-    } else {
-        window.addEventListener('devicemotion', motionHandler, false);
-    }
-}
-
-// Check if DeviceMotionEvent is supported
-if (!('DeviceMotionEvent' in window)) {
-    console.log("DeviceMotionEvent is not supported on this device.");
-}
 </script>
 
 </body>
 </html>
+
