@@ -2,46 +2,93 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Accelerometer Data Access</title>
+<title>Live Accelerometer Data Graph</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<h1>Access Accelerometer Data</h1>
+<h1>Live Accelerometer Data Graph</h1>
 <button onclick="requestMotionPermissions()">Enable Motion Data</button>
-<p id="dataDisplay">Waiting for motion data...</p>
+<canvas id="accChart"></canvas>
 
 <script>
+// Prepare the chart data structure
+var data = {
+    labels: [],
+    datasets: [
+        {
+            label: 'X-axis',
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            data: []
+        },
+        {
+            label: 'Y-axis',
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            data: []
+        },
+        {
+            label: 'Z-axis',
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            data: []
+        }
+    ]
+};
+
+// Setup options
+var config = {
+    type: 'line',
+    data: data,
+    options: {
+        scales: {
+            x: {
+                type: 'linear',
+                beginAtZero: true
+            }
+        }
+    }
+};
+
+// Create the chart
+var accChart = new Chart(
+    document.getElementById('accChart').getContext('2d'),
+    config
+);
+
+// Function to update chart
+function addData(chart, label, dataX, dataY, dataZ) {
+    chart.data.labels.push(label);
+    chart.data.datasets[0].data.push(dataX);
+    chart.data.datasets[1].data.push(dataY);
+    chart.data.datasets[2].data.push(dataZ);
+    chart.update();
+}
+
 function motionHandler(event) {
     var acc = event.acceleration;
     if (acc) {
-        var displayText = 'Acceleration along X-axis: ' + acc.x.toFixed(2) + 
-                          ', Y-axis: ' + acc.y.toFixed(2) + 
-                          ', Z-axis: ' + acc.z.toFixed(2);
-        document.getElementById('dataDisplay').innerText = displayText;
+        addData(accChart, event.timeStamp, acc.x, acc.y, acc.z);
     }
 }
 
 function requestMotionPermissions() {
     if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        // iOS 13+ devices
         DeviceMotionEvent.requestPermission().then(permissionState => {
             if (permissionState === 'granted') {
                 window.addEventListener('devicemotion', motionHandler, false);
             } else {
-                document.getElementById('dataDisplay').innerText = "Permission denied.";
+                console.log("Permission denied.");
             }
-        }).catch(error => {
-            console.error('Permission request failed', error);
-            document.getElementById('dataDisplay').innerText = "Permission request failed.";
-        });
+        }).catch(console.error);
     } else {
-        // Non-iOS 13 devices or browsers that do not require permissions
         window.addEventListener('devicemotion', motionHandler, false);
     }
 }
 
 // Check if DeviceMotionEvent is supported
 if (!('DeviceMotionEvent' in window)) {
-    document.getElementById('dataDisplay').innerText = "DeviceMotionEvent is not supported on this device.";
+    console.log("DeviceMotionEvent is not supported on this device.");
 }
 </script>
 
