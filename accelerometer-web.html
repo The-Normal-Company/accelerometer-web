@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Accelerometer Data Recorder</title>
+<title>Extended Accelerometer Data Recorder</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
-<h1>Accelerometer Data Recorder</h1>
+<h1>Extended Accelerometer Data Recorder</h1>
 <button onclick="startRecording()">Play</button>
 <button onclick="stopRecording()">End</button>
 <canvas id="accChart"></canvas>
@@ -24,9 +24,9 @@ document.addEventListener("DOMContentLoaded", function() {
         data: {
             labels: [],
             datasets: [
-                {label: 'X-axis', borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.5)', data: []},
-                {label: 'Y-axis', borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', data: []},
-                {label: 'Z-axis', borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)', data: []}
+                {label: 'X-axis (acceleration)', borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.5)', data: []},
+                {label: 'Y-axis (acceleration)', borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', data: []},
+                {label: 'Z-axis (acceleration)', borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)', data: []}
             ]
         },
         options: {
@@ -66,15 +66,23 @@ function stopRecording() {
 function motionHandler(event) {
     if (recording) {
         var acc = event.acceleration;
-        if (acc) {
+        var accGrav = event.accelerationIncludingGravity;
+        var rotRate = event.rotationRate;
+        if (acc && accGrav && rotRate) {
             var dataPoint = {
                 time: event.timeStamp,
                 x: acc.x,
                 y: acc.y,
-                z: acc.z
+                z: acc.z,
+                xGrav: accGrav.x,
+                yGrav: accGrav.y,
+                zGrav: accGrav.z,
+                alpha: rotRate.alpha,
+                beta: rotRate.beta,
+                gamma: rotRate.gamma
             };
             accData.push(dataPoint);
-            addData(accChart, event.timeStamp, acc.x, acc.y, acc.z);
+            // Update chart data here if needed
         }
     }
 }
@@ -84,13 +92,19 @@ function addData(chart, label, dataX, dataY, dataZ) {
     chart.data.datasets[0].data.push(dataX);
     chart.data.datasets[1].data.push(dataY);
     chart.data.datasets[2].data.push(dataZ);
+    if (chart.data.labels.length > 500) {  // Manage data point count to avoid overload
+        chart.data.labels.shift();
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.shift();
+        });
+    }
     chart.update();
 }
 
 function exportCSVFile(items) {
-    var csv = 'Time,X,Y,Z\n';
+    var csv = 'Time,X,Y,Z,X Grav,Y Grav,Z Grav,Alpha,Beta,Gamma\n';
     items.forEach(function(item) {
-        csv += item.time + ',' + item.x + ',' + item.y + ',' + item.z + '\n';
+        csv += [item.time, item.x, item.y, item.z, item.xGrav, item.yGrav, item.zGrav, item.alpha, item.beta, item.gamma].join(',') + '\n';
     });
     var hiddenElement = document.createElement('a');
     hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
