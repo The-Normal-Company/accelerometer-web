@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Comprehensive Accelerometer Data Recorder</title>
+<title>Optimized Accelerometer Data Recorder</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
-<h1>Comprehensive Accelerometer Data Recorder</h1>
+<h1>Optimized Accelerometer Data Recorder</h1>
 <button onclick="startRecording()">Play</button>
 <button onclick="stopRecording()">End</button>
 <canvas id="accChart"></canvas>
@@ -18,6 +18,8 @@
 var recording = false;
 var accData = [];
 var accChart, accGravChart, rotRateChart;
+var updateInterval = 500; // Update every 500 milliseconds
+var lastUpdateTime = 0;
 
 document.addEventListener("DOMContentLoaded", function() {
     var ctxAcc = document.getElementById('accChart').getContext('2d');
@@ -42,8 +44,10 @@ function configureChart(title, labels) {
             }))
         },
         options: {
+            animation: false,
             scales: {
-                x: {type: 'linear', beginAtZero: true}
+                x: {type: 'linear', beginAtZero: true},
+                y: {min: -15, max: 15} // Assuming typical g-force ranges for mobile devices
             },
             plugins: {
                 zoom: {zoom: {wheel: {enabled: true}, pinch: {enabled: true}, mode: 'xy'}, pan: {enabled: true, mode: 'xy'}}
@@ -51,6 +55,14 @@ function configureChart(title, labels) {
             title: {
                 display: true,
                 text: title
+            },
+            elements: {
+                line: {
+                    tension: 0 // Disables bezier curves
+                },
+                point: {
+                    radius: 0 // Disables point rendering
+                }
             }
         }
     };
@@ -80,7 +92,8 @@ function stopRecording() {
 }
 
 function motionHandler(event) {
-    if (recording) {
+    if (recording && Date.now() - lastUpdateTime > updateInterval) {
+        lastUpdateTime = Date.now();
         var acc = event.acceleration;
         var accGrav = event.accelerationIncludingGravity;
         var rotRate = event.rotationRate;
@@ -110,7 +123,7 @@ function addData(chart, label, data) {
     data.forEach((value, index) => {
         chart.data.datasets[index].data.push(value);
     });
-    if (chart.data.labels.length > 500) {  // Manage data point count to avoid overload
+    if (chart.data.labels.length > 100) {  // Reduce data points to 100 to avoid overload
         chart.data.labels.shift();
         chart.data.datasets.forEach((dataset) => {
             dataset.data.shift();
@@ -135,5 +148,6 @@ function exportCSVFile(items) {
 
 </body>
 </html>
+
 
 
