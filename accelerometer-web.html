@@ -2,32 +2,44 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Extended Accelerometer Data Recorder</title>
+<title>Comprehensive Accelerometer Data Recorder</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
-<h1>Extended Accelerometer Data Recorder</h1>
+<h1>Comprehensive Accelerometer Data Recorder</h1>
 <button onclick="startRecording()">Play</button>
 <button onclick="stopRecording()">End</button>
 <canvas id="accChart"></canvas>
+<canvas id="accGravChart"></canvas>
+<canvas id="rotRateChart"></canvas>
 
 <script>
 var recording = false;
 var accData = [];
-var accChart;
+var accChart, accGravChart, rotRateChart;
 
 document.addEventListener("DOMContentLoaded", function() {
-    var ctx = document.getElementById('accChart').getContext('2d');
-    accChart = new Chart(ctx, {
+    var ctxAcc = document.getElementById('accChart').getContext('2d');
+    var ctxAccGrav = document.getElementById('accGravChart').getContext('2d');
+    var ctxRotRate = document.getElementById('rotRateChart').getContext('2d');
+
+    accChart = new Chart(ctxAcc, configureChart('Acceleration (m/s²)', ['X-axis', 'Y-axis', 'Z-axis']));
+    accGravChart = new Chart(ctxAccGrav, configureChart('Acceleration including Gravity (m/s²)', ['X-axis', 'Y-axis', 'Z-axis']));
+    rotRateChart = new Chart(ctxRotRate, configureChart('Rotation Rate (deg/s)', ['Alpha', 'Beta', 'Gamma']));
+});
+
+function configureChart(title, labels) {
+    return {
         type: 'line',
         data: {
             labels: [],
-            datasets: [
-                {label: 'X-axis (acceleration)', borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.5)', data: []},
-                {label: 'Y-axis (acceleration)', borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', data: []},
-                {label: 'Z-axis (acceleration)', borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)', data: []}
-            ]
+            datasets: labels.map((label, index) => ({
+                label: label,
+                borderColor: `hsl(${index * 120}, 100%, 50%)`,
+                backgroundColor: `hsla(${index * 120}, 100%, 50%, 0.5)`,
+                data: []
+            }))
         },
         options: {
             scales: {
@@ -35,10 +47,14 @@ document.addEventListener("DOMContentLoaded", function() {
             },
             plugins: {
                 zoom: {zoom: {wheel: {enabled: true}, pinch: {enabled: true}, mode: 'xy'}, pan: {enabled: true, mode: 'xy'}}
+            },
+            title: {
+                display: true,
+                text: title
             }
         }
-    });
-});
+    };
+}
 
 function startRecording() {
     if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -82,16 +98,18 @@ function motionHandler(event) {
                 gamma: rotRate.gamma
             };
             accData.push(dataPoint);
-            // Update chart data here if needed
+            addData(accChart, event.timeStamp, [acc.x, acc.y, acc.z]);
+            addData(accGravChart, event.timeStamp, [accGrav.x, accGrav.y, accGrav.z]);
+            addData(rotRateChart, event.timeStamp, [rotRate.alpha, rotRate.beta, rotRate.gamma]);
         }
     }
 }
 
-function addData(chart, label, dataX, dataY, dataZ) {
+function addData(chart, label, data) {
     chart.data.labels.push(label);
-    chart.data.datasets[0].data.push(dataX);
-    chart.data.datasets[1].data.push(dataY);
-    chart.data.datasets[2].data.push(dataZ);
+    data.forEach((value, index) => {
+        chart.data.datasets[index].data.push(value);
+    });
     if (chart.data.labels.length > 500) {  // Manage data point count to avoid overload
         chart.data.labels.shift();
         chart.data.datasets.forEach((dataset) => {
@@ -117,4 +135,5 @@ function exportCSVFile(items) {
 
 </body>
 </html>
+
 
