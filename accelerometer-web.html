@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Accelerometer Data Access</title>
+</head>
+<body>
+<h1>Access Accelerometer Data</h1>
+<button onclick="requestMotionPermissions()">Enable Motion Data</button>
+<p id="dataDisplay">Waiting for motion data...</p>
+
+<script>
+function motionHandler(event) {
+    var acc = event.acceleration;
+    if (acc) {
+        var displayText = 'Acceleration along X-axis: ' + acc.x.toFixed(2) + 
+                          ', Y-axis: ' + acc.y.toFixed(2) + 
+                          ', Z-axis: ' + acc.z.toFixed(2);
+        document.getElementById('dataDisplay').innerText = displayText;
+    }
+}
+
+function requestMotionPermissions() {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        // iOS 13+ devices
+        DeviceMotionEvent.requestPermission().then(permissionState => {
+            if (permissionState === 'granted') {
+                window.addEventListener('devicemotion', motionHandler, false);
+            } else {
+                document.getElementById('dataDisplay').innerText = "Permission denied.";
+            }
+        }).catch(error => {
+            console.error('Permission request failed', error);
+            document.getElementById('dataDisplay').innerText = "Permission request failed.";
+        });
+    } else {
+        // Non-iOS 13 devices or browsers that do not require permissions
+        window.addEventListener('devicemotion', motionHandler, false);
+    }
+}
+
+// Check if DeviceMotionEvent is supported
+if (!('DeviceMotionEvent' in window)) {
+    document.getElementById('dataDisplay').innerText = "DeviceMotionEvent is not supported on this device.";
+}
+</script>
+
+</body>
+</html>
