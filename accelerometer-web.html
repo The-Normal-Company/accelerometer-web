@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Live Accelerometer Data Graph</title>
+<title>Interactive Accelerometer Data Graph</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
-<h1>Live Accelerometer Data Graph</h1>
+<h1>Interactive Accelerometer Data Graph</h1>
 <button onclick="requestMotionPermissions()">Enable Motion Data</button>
 <canvas id="accChart"></canvas>
 
 <script>
-// Prepare the chart data structure
+// Prepare the chart data structure with limited data retention
 var data = {
     labels: [],
     datasets: [
@@ -19,24 +20,27 @@ var data = {
             label: 'X-axis',
             borderColor: 'rgb(255, 99, 132)',
             backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            data: []
+            data: [],
+            lineTension: 0
         },
         {
             label: 'Y-axis',
             borderColor: 'rgb(54, 162, 235)',
             backgroundColor: 'rgba(54, 162, 235, 0.5)',
-            data: []
+            data: [],
+            lineTension: 0
         },
         {
             label: 'Z-axis',
             borderColor: 'rgb(75, 192, 192)',
             backgroundColor: 'rgba(75, 192, 192, 0.5)',
-            data: []
+            data: [],
+            lineTension: 0
         }
     ]
 };
 
-// Setup options
+// Setup options with zoom and pan capabilities
 var config = {
     type: 'line',
     data: data,
@@ -45,6 +49,19 @@ var config = {
             x: {
                 type: 'linear',
                 beginAtZero: true
+            }
+        },
+        plugins: {
+            zoom: {
+                zoom: {
+                    wheel: { enabled: true },
+                    pinch: { enabled: true },
+                    mode: 'xy'
+                },
+                pan: {
+                    enabled: true,
+                    mode: 'xy'
+                }
             }
         }
     }
@@ -56,8 +73,14 @@ var accChart = new Chart(
     config
 );
 
-// Function to update chart
+// Function to update chart and limit data points
 function addData(chart, label, dataX, dataY, dataZ) {
+    if (chart.data.labels.length > 200) { // Limit data points to 200
+        chart.data.labels.shift();
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data.shift();
+        });
+    }
     chart.data.labels.push(label);
     chart.data.datasets[0].data.push(dataX);
     chart.data.datasets[1].data.push(dataY);
