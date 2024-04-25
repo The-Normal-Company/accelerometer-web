@@ -2,71 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Optimized Accelerometer Data Recorder</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+<title>Accelerometer Data Recorder</title>
 </head>
 <body>
-<h1>Optimized Accelerometer Data Recorder</h1>
-<button onclick="startRecording()">Play</button>
-<button onclick="stopRecording()">End</button>
-<canvas id="accChart"></canvas>
-<canvas id="accGravChart"></canvas>
-<canvas id="rotRateChart"></canvas>
+<h1>Accelerometer Data Recorder</h1>
+<button onclick="startRecording()">Start Recording</button>
+<button onclick="stopRecording()">Stop and Download Data</button>
 
 <script>
 var recording = false;
 var accData = [];
-var accChart, accGravChart, rotRateChart;
-var updateInterval = 500; // Update every 500 milliseconds
-var lastUpdateTime = 0;
-
-document.addEventListener("DOMContentLoaded", function() {
-    var ctxAcc = document.getElementById('accChart').getContext('2d');
-    var ctxAccGrav = document.getElementById('accGravChart').getContext('2d');
-    var ctxRotRate = document.getElementById('rotRateChart').getContext('2d');
-
-    accChart = new Chart(ctxAcc, configureChart('Acceleration (m/s²)', ['X-axis', 'Y-axis', 'Z-axis']));
-    accGravChart = new Chart(ctxAccGrav, configureChart('Acceleration including Gravity (m/s²)', ['X-axis', 'Y-axis', 'Z-axis']));
-    rotRateChart = new Chart(ctxRotRate, configureChart('Rotation Rate (deg/s)', ['Alpha', 'Beta', 'Gamma']));
-});
-
-function configureChart(title, labels) {
-    return {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: labels.map((label, index) => ({
-                label: label,
-                borderColor: `hsl(${index * 120}, 100%, 50%)`,
-                backgroundColor: `hsla(${index * 120}, 100%, 50%, 0.5)`,
-                data: []
-            }))
-        },
-        options: {
-            animation: false,
-            scales: {
-                x: {type: 'linear', beginAtZero: true},
-                y: {min: -15, max: 15} // Assuming typical g-force ranges for mobile devices
-            },
-            plugins: {
-                zoom: {zoom: {wheel: {enabled: true}, pinch: {enabled: true}, mode: 'xy'}, pan: {enabled: true, mode: 'xy'}}
-            },
-            title: {
-                display: true,
-                text: title
-            },
-            elements: {
-                line: {
-                    tension: 0 // Disables bezier curves
-                },
-                point: {
-                    radius: 0 // Disables point rendering
-                }
-            }
-        }
-    };
-}
 
 function startRecording() {
     if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -92,8 +37,7 @@ function stopRecording() {
 }
 
 function motionHandler(event) {
-    if (recording && Date.now() - lastUpdateTime > updateInterval) {
-        lastUpdateTime = Date.now();
+    if (recording) {
         var acc = event.acceleration;
         var accGrav = event.accelerationIncludingGravity;
         var rotRate = event.rotationRate;
@@ -111,25 +55,8 @@ function motionHandler(event) {
                 gamma: rotRate.gamma
             };
             accData.push(dataPoint);
-            addData(accChart, event.timeStamp, [acc.x, acc.y, acc.z]);
-            addData(accGravChart, event.timeStamp, [accGrav.x, accGrav.y, accGrav.z]);
-            addData(rotRateChart, event.timeStamp, [rotRate.alpha, rotRate.beta, rotRate.gamma]);
         }
     }
-}
-
-function addData(chart, label, data) {
-    chart.data.labels.push(label);
-    data.forEach((value, index) => {
-        chart.data.datasets[index].data.push(value);
-    });
-    if (chart.data.labels.length > 100) {  // Reduce data points to 100 to avoid overload
-        chart.data.labels.shift();
-        chart.data.datasets.forEach((dataset) => {
-            dataset.data.shift();
-        });
-    }
-    chart.update();
 }
 
 function exportCSVFile(items) {
@@ -148,6 +75,7 @@ function exportCSVFile(items) {
 
 </body>
 </html>
+
 
 
 
